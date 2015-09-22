@@ -12,17 +12,18 @@ namespace TestFormatting
         // <see cref="https://en.wikipedia.org/wiki/List_of_country_calling_codes"/>
         // <see cref=":https://en.wikipedia.org/wiki/Microsoft_telephone_number_format"/>
 
-
         /// <summary>
         /// Country code: 
         /// - prefix plus sign + 
         /// - followed by 1 to 7 digits optionally with space separator(s).
+        /// Mandatory
         /// </summary>
         public string CountryCode { get; set; }
 
         /// <summary>
         /// Area Code:
         /// - 1 to 5 digits
+        /// Optional.
         /// </summary>
         public string AreaCode { get; set; }
 
@@ -31,8 +32,21 @@ namespace TestFormatting
         /// - digits: 0..9
         /// - dialing control characters: A a B b C c D d P p T t W w * # ! @ $ ?.
         /// - formatting characters: space, period, dash.
+        /// Mandatory
         /// </summary>
         public string SubscriberNumber { get; set; }
+
+        public string Concatenated
+        {
+            get
+            {
+                return String.Format("{0}{1}{2}"
+                    , CountryCode.Replace(" ","").Replace("-","")
+                    , (AreaCode ?? "").Replace(" ", "").Replace("-", "")
+                    , SubscriberNumber.Replace(" ", "").Replace("-", "")
+                    );
+            }
+        }
 
 
         // --- IFormattable
@@ -45,7 +59,13 @@ namespace TestFormatting
         /// <returns></returns>
         public string ToString(string format, IFormatProvider formatProvider)
         {
-            // the
+            // the formatProvider is NOT uset
+            //
+            // Proposed use: formatProvider is different depending on the target device used to format SMS/FaceTime/....
+            // - IOS
+            // - Android
+            // - Windows-phone
+            // - 
 
             var result = String.Empty;
 
@@ -74,13 +94,13 @@ namespace TestFormatting
                                 // General Phone Number.
                                 result = String.IsNullOrEmpty(AreaCode) ?
                                     // no area code
-                                    String.Format("{0} {2}"
+                                    String.Format("{0}  {2}"  // note significant double space
                                     , CountryCode
                                     , AreaCode
                                     , SubscriberNumber
                                     )
                                     :
-                                // with area code
+                                    // with area code
                                 String.Format("{0} ({1}) {2}"
                                     , CountryCode
                                     , AreaCode
@@ -100,7 +120,7 @@ namespace TestFormatting
                                     , SubscriberNumber
                                     )
                                     :
-                                // with area code
+                                    // with area code
                                 String.Format("({1}) {2}"
                                     , CountryCode
                                     , AreaCode
@@ -125,11 +145,7 @@ namespace TestFormatting
                         case "t":
                             {
                                 // Dialing phone number on smartphone.
-                                result = String.Format("tel:{0}{1}{2}"
-                                    , CountryCode
-                                    , AreaCode
-                                    , SubscriberNumber
-                                    );
+                                result = String.Format("tel:{0}", Concatenated);
                             }
                             break;
 
@@ -137,23 +153,23 @@ namespace TestFormatting
                         case "s":
                             {
                                 // SMS phone number on smartphone always with country code.
-                                result = String.Format("sms:{0}{1}{2}"
-                                    , CountryCode
-                                    , AreaCode
-                                    , SubscriberNumber
-                                    );
+                                // Syntax for prefilling message:
+                                // <a href="sms:{full-phone-number}&body={message here}>visible link</a>
+                                result = String.Format("sms:{0}", Concatenated);
                             }
                             break;
 
                         case "F": // full FaceTime 
+                            {
+                                // FaceTime phone number on smartphone.
+                                result = String.Format("facetime:{0}",Concatenated);
+                            }
+                            break;
+
                         case "f": // FaceTime audio only
                             {
                                 // FaceTime phone number on smartphone.
-                                result = String.Format("xxx:{0}{1}{2}"
-                                    , CountryCode
-                                    , AreaCode
-                                    , SubscriberNumber
-                                    );
+                                result = String.Format("facetime-audio:{0}",Concatenated);
                             }
                             break;
 
@@ -161,11 +177,7 @@ namespace TestFormatting
                         case "y": // audio only
                             {
                                 // Skype phone number on smartphone.
-                                result = String.Format("sms:{0}{1}{2}"
-                                    , CountryCode
-                                    , AreaCode
-                                    , SubscriberNumber
-                                    );
+                                result = String.Format("callto://{0}",Concatenated);
                             }
                             break;
 
@@ -180,7 +192,7 @@ namespace TestFormatting
             return result;
         }
 
-        public bool TryParse(String source, out PhoneNumber result)
+        public static bool TryParse(String source, out PhoneNumber result)
         {
             if (string.IsNullOrEmpty(source))
             {
@@ -207,11 +219,11 @@ namespace TestFormatting
                 try
                 {
                     var xml = new XmlDocument();
-                    xml.InnerText = String.Format("<?xml version=\"1.0\" encoding=\"utf - 8\"?><root>{0}</root>", source);
+                    xml.InnerXml = String.Format("<?xml version=\"1.0\" encoding=\"utf-8\"?><root>{0}</root>", source);
 
-                    var countryNode = xml.SelectSingleNode("CountryCode");
-                    var areaNode = xml.SelectSingleNode("AreaCode");
-                    var subscriberNode = xml.SelectSingleNode("SubscriberNumber");
+                    var countryNode = xml.SelectSingleNode("//CountryCode");
+                    var areaNode = xml.SelectSingleNode("//AreaCode");
+                    var subscriberNode = xml.SelectSingleNode("//SubscriberNumber");
 
                     if (countryNode != null && areaNode != null && subscriberNode != null)
                     {
@@ -224,32 +236,64 @@ namespace TestFormatting
 
             // Parse from G            
             {
-                do // do once with break options.
+                // expected "+CountryCode [(AreaCode)] SubscriberNumber".  AreaCode is optional
+                // expected "+CountryCode  SubscriberNumber".  AreaCode is optional Notice double space between CC and SN.
+
+                var charArray = source.ToCharArray();
+
+                var areaStart = source.IndexOf(" (", StringComparison.OrdinalIgnoreCase);
+
+                var hasAreaCode = areaStart > -1;
+
+                if (hasAreaCode)
                 {
-                    // expected "+CountryCode [(AreaCode)] SubscriberNumber".  AreaCode is optional
-                    //           a             b        c de           
+                    var countryCode = source.Substring(0, areaStart).Trim();
 
-                    var areaCode = String.Empty;
+                    var areaEnd = source.IndexOf(") ", StringComparison.CurrentCultureIgnoreCase);
 
-                    var pa = source.IndexOf("+");
-                    if (pa == -1) { break; }
-
-                    var pb = source.IndexOf("(");
-                    if (pb != -1)
+                    if (areaEnd == -1)
                     {
-                        var pc = source.IndexOf(")", pb + 1);
-                        if (pc == -1) { break; }
-
-                        areaCode = source.Substring(0, 0);
+                        result = null;
+                        return false;
                     }
 
+                    var areaCode = source.Substring(areaStart + 2, areaEnd - areaStart - 2).Trim();
 
-                } while (false);
+                    var subscriberNumber = source.Substring(areaEnd + 2).Trim();
+
+                    result = new PhoneNumber
+                    {
+                        CountryCode = countryCode,
+                        AreaCode = areaCode,
+                        SubscriberNumber = subscriberNumber
+                    };
+
+                    return true;
+                }
+                else
+                {
+                    var ccEnd = source.IndexOf("  ", StringComparison.OrdinalIgnoreCase);
+                    if (ccEnd == -1)
+                    {
+                        result = null;
+                        return false;
+                    }
+
+                    var countryCode = source.Substring(0, ccEnd).Trim();
+
+                    var subscriberNumber = source.Substring(ccEnd + 1).Trim();
+
+                    result = new PhoneNumber
+                    {
+                        CountryCode = countryCode,
+                        AreaCode = string.Empty,
+                        SubscriberNumber = subscriberNumber
+                    };
+
+                    return true;
+                }
 
             }
-
-            result = null;
-            return false;
         }
     }
 }
