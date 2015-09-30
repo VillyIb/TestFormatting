@@ -1,17 +1,13 @@
 ﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TestFormatting.CommunicationChannel
 {
-    public sealed class Email : BaseCommunicationChannel
+    public class FaceTime : BaseCommunicationChannel
     {
-        public String EmailId { get; set; }
+        public String FaceTimeId { get; set; }
 
-        public override string GenericId { get { return EmailId; } }
+
+        public override string GenericId { get { return FaceTimeId; } }
 
 
         public override string ToString(string format, IFormatProvider formatProvider)
@@ -34,13 +30,17 @@ namespace TestFormatting.CommunicationChannel
 
                     switch (formatCode)
                     {
-                        case "S":
-                        case "s":
+                        case "F": // full FaceTime 
                             {
-                                // Email
-                                // Syntax for prefilling message:
-                                // <a href="email:{EmailId}>visible link</a>
-                                result = String.Format("mailto:{0}", GenericId);
+                                // FaceTime phone number on smartphone.
+                                result = String.Format("facetime:{0}", GenericId);
+                            }
+                            break;
+
+                        case "f": // FaceTime audio only
+                            {
+                                // FaceTime phone number on smartphone.
+                                result = String.Format("facetime-audio:{0}", GenericId);
                             }
                             break;
 
@@ -50,25 +50,25 @@ namespace TestFormatting.CommunicationChannel
                             }
                             break;
                     }
-
                 }
             }
-
 
             return result;
         }
 
 
-        public static bool TryParse(string source, out Email value)
+        public static bool TryParse(string source, out FaceTime value)
         {
-            value = new Email { EmailId = source };
+            value = new FaceTime { FaceTimeId = source };
             return true;
         }
 
 
-        public Email()
+        public FaceTime()
         {
-              ServiceEnable(CommunicationServiceType.Email);
+            ServiceEnable(CommunicationServiceType.FaceTime);
+            ServiceEnable(CommunicationServiceType.FaceTimeAudio);
         }
+
     }
 }

@@ -8,10 +8,13 @@ using System.Xml.Serialization;
 
 namespace TestFormatting.CommunicationChannel
 {
-    public class BaceCommunicationChannel : IFormattable
+    public abstract class BaseCommunicationChannel
     {
         private List<CommunicationServiceType> zServiceTypeList;
 
+        /// <summary>
+        /// Holds the list of Enabled Services.
+        /// </summary>
         //[XmlElement("ServiceList")]
         [XmlArray("ServiceList")]
         [XmlArrayItem("Service")]
@@ -26,31 +29,61 @@ namespace TestFormatting.CommunicationChannel
         /// </summary>
         /// <param name="communicationServiceType"></param>
         /// <returns></returns>
-        public virtual bool ServiceEnabled(CommunicationServiceType communicationServiceType)
+        public virtual bool ServiceIsEnabled(CommunicationServiceType communicationServiceType)
         {
             return ServiceTypeList.Any(t => t.Equals(communicationServiceType));
         }
 
 
-        protected virtual void ServiceSet(CommunicationServiceType communicationServiceType)
+        /// <summary>
+        /// Returns list of supported services.
+        /// Override this method to provide specific Services.
+        /// </summary>
+        /// <param name="communicationServiceTypeList"></param>
+        public virtual void ServiceSupported(out List<CommunicationServiceType> communicationServiceTypeList)
         {
-            if (!(ServiceEnabled(communicationServiceType)))
+            communicationServiceTypeList = new List<CommunicationServiceType>();
+        }
+
+
+        /// <summary>
+        /// Enables service.
+        /// </summary>
+        /// <param name="communicationServiceType"></param>
+        public void ServiceEnable(CommunicationServiceType communicationServiceType)
+        {
+            List<CommunicationServiceType> t1;
+            ServiceSupported(out t1);
+
+            if (t1.Any(t => t.Equals(communicationServiceType)))
             {
-                ServiceTypeList.Add(communicationServiceType);
+                if (!(ServiceIsEnabled(communicationServiceType)))
+                {
+                    ServiceTypeList.Add(communicationServiceType);
+                }
             }
         }
 
 
-        protected virtual void ServiceClear(CommunicationServiceType communicationServiceType)
+        /// <summary>
+        /// Disables service.
+        /// </summary>
+        /// <param name="communicationServiceType"></param>
+        protected virtual void ServiceDisable(CommunicationServiceType communicationServiceType)
         {
-            if (!(ServiceEnabled(communicationServiceType)))
+            if (!(ServiceIsEnabled(communicationServiceType)))
             {
                 ServiceTypeList.Remove(communicationServiceType);
             }
         }
 
 
-        public virtual string ToString(string format, IFormatProvider formatProvider)
+        /// <summary>
+        /// Generic representation of class Id.
+        /// </summary>
+        public abstract string GenericId { get; }
+
+        public virtual string ToString(string format = "G", IFormatProvider formatProvider = null)
         {
             var result = String.Empty;
 
@@ -62,8 +95,16 @@ namespace TestFormatting.CommunicationChannel
 
             switch (formatCode)
             {
+                case "G":
+                case "g":
+                    {
+                        result = GenericId;
+                    }
+                    break;
+
                 case "X": // XML fragment
                 case "x": // XML fragment
+                default:
                     {
                         var settings = new XmlWriterSettings
                         {
@@ -72,7 +113,7 @@ namespace TestFormatting.CommunicationChannel
                             OmitXmlDeclaration = true,
                         };
 
-                        var serializer = new XmlSerializer(typeof(CommunicationChanneXl));
+                        var serializer = new XmlSerializer(GetType());
 
                         using (var stringWriter = new StringWriter())
                         {
@@ -89,5 +130,7 @@ namespace TestFormatting.CommunicationChannel
 
             return result;
         }
+
+
     }
 }

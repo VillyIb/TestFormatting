@@ -18,7 +18,7 @@ namespace TestFormatting
         static void Main(string[] args)
         {
             CommunicationChanneXl t1;
-            var ph = CommunicationChanneXl.TryParse("+45 7 (123) 21 17 45 05", out t1) ? t1 : new CommunicationChanneXl();
+            var ph = PhoneNumber.TryParse("+45 7 (123) 21 17 45 05", out t1) ? t1 : new CommunicationChanneXl();
             ph.ServiceTypeList.Add(CommunicationServiceType.Audio);
             ph.ServiceTypeList.Add(CommunicationServiceType.Sms);
             ph.ServiceTypeList.Add(CommunicationServiceType.Skype);

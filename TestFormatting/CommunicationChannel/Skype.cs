@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace TestFormatting.CommunicationChannel
 {
-    public sealed class Email : BaseCommunicationChannel
+    public class Skype : BaseCommunicationChannel
     {
-        public String EmailId { get; set; }
+        private string SkypeId { get; set; }
 
-        public override string GenericId { get { return EmailId; } }
+        public override string GenericId { get { return SkypeId; } }
 
 
         public override string ToString(string format, IFormatProvider formatProvider)
@@ -37,10 +36,18 @@ namespace TestFormatting.CommunicationChannel
                         case "S":
                         case "s":
                             {
-                                // Email
+                                // SMS phone number on smartphone always with country code.
                                 // Syntax for prefilling message:
-                                // <a href="email:{EmailId}>visible link</a>
-                                result = String.Format("mailto:{0}", GenericId);
+                                // <a href="sms:{full-phone-number}&body={message here}>visible link</a>
+                                result = String.Format("sms:{0}", GenericId);
+                            }
+                            break;
+
+                        case "Y": // full
+                        case "y": // audio only
+                            {
+                                // Skype phone number on smartphone.
+                                result = String.Format("callto://{0}", GenericId);
                             }
                             break;
 
@@ -59,16 +66,17 @@ namespace TestFormatting.CommunicationChannel
         }
 
 
-        public static bool TryParse(string source, out Email value)
+        public static bool TryParse(string source, out Skype value)
         {
-            value = new Email { EmailId = source };
+            value = new Skype { SkypeId = source };
             return true;
         }
 
 
-        public Email()
+        public Skype()
         {
-              ServiceEnable(CommunicationServiceType.Email);
+            ServiceEnable(CommunicationServiceType.Skype);
+            ServiceEnable(CommunicationServiceType.SkypeAudio);
         }
     }
 }

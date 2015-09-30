@@ -43,11 +43,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommunicationChanneXl.cs" />
-    <Compile Include="CommunicationChannel\BaceCommunicationChannel.cs" />
-    <Compile Include="CommunicationChannel\Email.cs" />
+    <Compile Include="CommunicationChannel\Cellular.cs" />
+    <Compile Include="CommunicationChannel\FaceTime.cs" />
+    <Compile Include="CommunicationChannel\IBasePhoneNumber.cs" />
     <Compile Include="CommunicationChannel\PhoneNumber.cs" />
-    <Compile Include="PhoneNumberFormatter.cs" />
+    <Compile Include="CommunicationChannel\Skype.cs" />
+    <Compile Include="CommunicationChannel\BaseCommunicationChannel.cs" />
+    <Compile Include="CommunicationChannel\Email.cs" />
+    <Compile Include="CommunicationChannel\BasePhoneNumber.cs" />
     <Compile Include="CommunicationServiceType.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
