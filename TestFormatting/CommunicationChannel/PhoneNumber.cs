@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Serialization;
 
-namespace TestFormatting
+namespace TestFormatting.CommunicationChannel
 {
-    public class PhoneNumber : IFormattable
+    public class PhoneNumber : BaceCommunicationChannel
     {
         // <see cref="https://en.wikipedia.org/wiki/E.164"/>
         // <see cref="https://en.wikipedia.org/wiki/List_of_country_calling_codes"/>
         // <see cref=":https://en.wikipedia.org/wiki/Microsoft_telephone_number_format"/>
 
         /// <summary>
+        /// Phone/Cellular -
         /// Country code: 
         /// - prefix plus sign + 
         /// - followed by 1 to 7 digits optionally with space separator(s).
@@ -21,6 +25,7 @@ namespace TestFormatting
         public string CountryCode { get; set; }
 
         /// <summary>
+        /// Phone/Cellular -
         /// Area Code:
         /// - 1 to 5 digits
         /// Optional.
@@ -28,6 +33,8 @@ namespace TestFormatting
         public string AreaCode { get; set; }
 
         /// <summary>
+        /// All types
+        /// Phone/Cellular -
         /// Subscriber Number:
         /// - digits: 0..9
         /// - dialing control characters: A a B b C c D d P p T t W w * # ! @ $ ?.
@@ -36,16 +43,29 @@ namespace TestFormatting
         /// </summary>
         public string SubscriberNumber { get; set; }
 
+        /// <summary>
+        /// Valid for Phone and Cellular
+        /// </summary>
         public string Concatenated
         {
             get
             {
                 return String.Format("{0}{1}{2}"
-                    , CountryCode.Replace(" ","").Replace("-","")
+                    , CountryCode.Replace(" ", "").Replace("-", "")
                     , (AreaCode ?? "").Replace(" ", "").Replace("-", "")
                     , SubscriberNumber.Replace(" ", "").Replace("-", "")
                     );
             }
+        }
+
+
+        protected override void ServiceSet(CommunicationServiceType communicationServiceType)
+        {
+            if(CommunicationServiceType.Cellular == communicationServiceType
+                || CommunicationServiceType.Sms == communicationServiceType
+                || CommunicationServiceType.Phone  == communicationServiceType
+                )
+                base.ServiceSet(communicationServiceType);
         }
 
 
@@ -57,7 +77,7 @@ namespace TestFormatting
         /// <param name="format"></param>
         /// <param name="formatProvider"></param>
         /// <returns></returns>
-        public string ToString(string format, IFormatProvider formatProvider)
+        public override string ToString(string format, IFormatProvider formatProvider)
         {
             // the formatProvider is NOT uset
             //
@@ -80,11 +100,21 @@ namespace TestFormatting
                         case "O":
                         case "o":
                             {
+                                var services = new StringBuilder();
+                                foreach (var phoneServiceType in ServiceTypeList)
+                                {
+                                    services.AppendFormat("{0}{1:G}"
+                                        , services.Length == 0 ? "" : ","
+                                        , phoneServiceType
+                                        );
+                                }
+
                                 // Round trip format
-                                result = String.Format("{0};{1};{2};Z"
+                                result = String.Format("{0};{1};{2};{3};Z"
                                     , CountryCode
                                     , AreaCode
                                     , SubscriberNumber
+                                    , services
                                     );
                             }
                             break;
@@ -96,6 +126,7 @@ namespace TestFormatting
                                     // no area code
                                     String.Format("{0}  {2}"  // note significant double space
                                     , CountryCode
+                                    // ReSharper disable once FormatStringProblem
                                     , AreaCode
                                     , SubscriberNumber
                                     )
@@ -115,13 +146,16 @@ namespace TestFormatting
                                 result = String.IsNullOrEmpty(AreaCode) ?
                                     // no area code
                                     String.Format("{2}"
+                                    // ReSharper disable FormatStringProblem
                                     , CountryCode
                                     , AreaCode
+                                    // ReSharper restore FormatStringProblem
                                     , SubscriberNumber
                                     )
                                     :
                                     // with area code
                                 String.Format("({1}) {2}"
+                                    // ReSharper disable once FormatStringProblem
                                     , CountryCode
                                     , AreaCode
                                     , SubscriberNumber
@@ -132,12 +166,7 @@ namespace TestFormatting
                         case "X": // XML fragment
                         case "x": // XML fragment
                             {
-                                // General Phone Number.
-                                result = String.Format("<PhoneNumber><CountryCode>{0}</CountryCode><AreaCode>{1}</AreaCode><SubscriberNumber>{2}</SubscriberNumber></PhoneNumber>"
-                                    , CountryCode
-                                    , AreaCode
-                                    , SubscriberNumber
-                                    );
+                                result = base.ToString(format, formatProvider);
                             }
                             break;
 
@@ -162,14 +191,14 @@ namespace TestFormatting
                         case "F": // full FaceTime 
                             {
                                 // FaceTime phone number on smartphone.
-                                result = String.Format("facetime:{0}",Concatenated);
+                                result = String.Format("facetime:{0}", Concatenated);
                             }
                             break;
 
                         case "f": // FaceTime audio only
                             {
                                 // FaceTime phone number on smartphone.
-                                result = String.Format("facetime-audio:{0}",Concatenated);
+                                result = String.Format("facetime-audio:{0}", Concatenated);
                             }
                             break;
 
@@ -177,11 +206,8 @@ namespace TestFormatting
                         case "y": // audio only
                             {
                                 // Skype phone number on smartphone.
-                                result = String.Format("callto://{0}",Concatenated);
+                                result = String.Format("callto://{0}", Concatenated);
                             }
-                            break;
-
-                        default:
                             break;
                     }
 
@@ -192,108 +218,5 @@ namespace TestFormatting
             return result;
         }
 
-        public static bool TryParse(String source, out PhoneNumber result)
-        {
-            if (string.IsNullOrEmpty(source))
-            {
-                result = null;
-                return false;
-            }
-
-            // Parse from O
-            {
-                // Expected "+CountryCode;AreaCode;SubscriberNumber;Z". 
-                var arr = source.Split(new[] { ';' }, StringSplitOptions.None);
-                if (arr.Length == 4)
-                {
-                    if ("Z".Equals(arr[3], StringComparison.OrdinalIgnoreCase))
-                    {
-                        result = new PhoneNumber { CountryCode = arr[0], AreaCode = arr[1], SubscriberNumber = arr[2] };
-                        return true;
-                    }
-                }
-            }
-
-            // Parse from X
-            {
-                try
-                {
-                    var xml = new XmlDocument();
-                    xml.InnerXml = String.Format("<?xml version=\"1.0\" encoding=\"utf-8\"?><root>{0}</root>", source);
-
-                    var countryNode = xml.SelectSingleNode("//CountryCode");
-                    var areaNode = xml.SelectSingleNode("//AreaCode");
-                    var subscriberNode = xml.SelectSingleNode("//SubscriberNumber");
-
-                    if (countryNode != null && areaNode != null && subscriberNode != null)
-                    {
-                        result = new PhoneNumber { CountryCode = countryNode.InnerText, AreaCode = areaNode.InnerText, SubscriberNumber = subscriberNode.InnerText };
-                        return true;
-                    }
-                }
-                catch { }
-            }
-
-            // Parse from G            
-            {
-                // expected "+CountryCode [(AreaCode)] SubscriberNumber".  AreaCode is optional
-                // expected "+CountryCode  SubscriberNumber".  AreaCode is optional Notice double space between CC and SN.
-
-                var charArray = source.ToCharArray();
-
-                var areaStart = source.IndexOf(" (", StringComparison.OrdinalIgnoreCase);
-
-                var hasAreaCode = areaStart > -1;
-
-                if (hasAreaCode)
-                {
-                    var countryCode = source.Substring(0, areaStart).Trim();
-
-                    var areaEnd = source.IndexOf(") ", StringComparison.CurrentCultureIgnoreCase);
-
-                    if (areaEnd == -1)
-                    {
-                        result = null;
-                        return false;
-                    }
-
-                    var areaCode = source.Substring(areaStart + 2, areaEnd - areaStart - 2).Trim();
-
-                    var subscriberNumber = source.Substring(areaEnd + 2).Trim();
-
-                    result = new PhoneNumber
-                    {
-                        CountryCode = countryCode,
-                        AreaCode = areaCode,
-                        SubscriberNumber = subscriberNumber
-                    };
-
-                    return true;
-                }
-                else
-                {
-                    var ccEnd = source.IndexOf("  ", StringComparison.OrdinalIgnoreCase);
-                    if (ccEnd == -1)
-                    {
-                        result = null;
-                        return false;
-                    }
-
-                    var countryCode = source.Substring(0, ccEnd).Trim();
-
-                    var subscriberNumber = source.Substring(ccEnd + 1).Trim();
-
-                    result = new PhoneNumber
-                    {
-                        CountryCode = countryCode,
-                        AreaCode = string.Empty,
-                        SubscriberNumber = subscriberNumber
-                    };
-
-                    return true;
-                }
-
-            }
-        }
     }
 }

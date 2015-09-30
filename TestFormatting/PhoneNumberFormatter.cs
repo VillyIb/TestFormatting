@@ -36,7 +36,7 @@ namespace TestFormatting
             }
 
 
-            if (arg is PhoneNumber)
+            if (arg is CommunicationChanneXl)
             {
                 //bytes = ((BigInteger)arg).ToByteArray();
             }

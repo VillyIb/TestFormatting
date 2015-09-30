@@ -17,8 +17,14 @@ namespace TestFormatting
     {
         static void Main(string[] args)
         {
-            PhoneNumber t1;
-            var ph = PhoneNumber.TryParse("+45 7 (123) 21 17 45 05", out t1) ? t1 : new PhoneNumber();
+            CommunicationChanneXl t1;
+            var ph = CommunicationChanneXl.TryParse("+45 7 (123) 21 17 45 05", out t1) ? t1 : new CommunicationChanneXl();
+            ph.ServiceTypeList.Add(CommunicationServiceType.Audio);
+            ph.ServiceTypeList.Add(CommunicationServiceType.Sms);
+            ph.ServiceTypeList.Add(CommunicationServiceType.Skype);
+            ph.ServiceTypeList.Add(CommunicationServiceType.SkypeAudio);
+            ph.ServiceTypeList.Add(CommunicationServiceType.FaceTime);
+            ph.ServiceTypeList.Add(CommunicationServiceType.FaceTimeAudio);
 
             var ptG = ph.ToString("G", null);
             var ptg = ph.ToString("g", null);
@@ -41,12 +47,12 @@ namespace TestFormatting
             var ptF = ph.ToString("F", null);
             var ptf = ph.ToString("f", null);
 
-            var phG = PhoneNumber.TryParse(ptG, out t1) ? t1 : null;
-            var phx = PhoneNumber.TryParse(ptx, out t1) ? t1 : null;
-            var pho = PhoneNumber.TryParse(pto, out t1) ? t1 : null;
-            var phg = PhoneNumber.TryParse(ptg, out t1) ? t1 : null;
-            var pht = PhoneNumber.TryParse(ptt, out t1) ? t1 : null;
-            var phy = PhoneNumber.TryParse(pty, out t1) ? t1 : null;
+            var phG = CommunicationChanneXl.TryParse(ptG, out t1) ? t1 : null;
+            var phx = CommunicationChanneXl.TryParse(ptx, out t1) ? t1 : null;
+            var pho = CommunicationChanneXl.TryParse(pto, out t1) ? t1 : null;
+            var phg = CommunicationChanneXl.TryParse(ptg, out t1) ? t1 : null;
+            var pht = CommunicationChanneXl.TryParse(ptt, out t1) ? t1 : null;
+            var phy = CommunicationChanneXl.TryParse(pty, out t1) ? t1 : null;
 
             var phxx = phG;
             phxx = phx;
